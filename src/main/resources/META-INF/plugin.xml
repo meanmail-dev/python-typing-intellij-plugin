@@ -1,0 +1,21 @@
+<!--suppress PluginXmlValidity, CheckTagEmptyBody -->
+<idea-plugin url="https://meanmail.dev">
+    <id>dev.meanmail.plugin.python-typing</id>
+    <name>Python Typing</name>
+    <version>SNAPSHOT</version>
+    <idea-version since-build="211"/>
+    <vendor email="plugin@meanmail.dev" url="https://meanmail.dev">meanmail</vendor>
+    <description></description>
+    <change-notes></change-notes>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.python</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow id="Typing"
+                    anchor="bottom"
+                    factoryClass="dev.meanmail.tools.TypingTool"/>
+        <annotator language="Python"
+                   implementationClass="dev.meanmail.IgnoreAnnotator"/>
+    </extensions>
+</idea-plugin>
