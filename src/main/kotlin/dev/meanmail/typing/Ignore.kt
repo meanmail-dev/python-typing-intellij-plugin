@@ -23,43 +23,55 @@ data class Ignore(
 
 val pattern = Regex(".*(type: ?ignore(\\[[\\S-]+(,\\s*[\\S-]+)*])?).*")
 
-fun getIgnore(project: Project): Map<VirtualFile, List<Ignore>> {
-    val ignores = mutableMapOf<VirtualFile, MutableList<Ignore>>()
+fun getIgnore(project: Project): MutableMap<VirtualFile, List<Ignore>> {
+    val ignores = mutableMapOf<VirtualFile, List<Ignore>>()
     val contentRoots = ProjectRootManager.getInstance(project).contentRoots
     val python = PythonLanguage.getInstance()
 
     for (root in contentRoots) {
         processFileRecursivelyWithoutIgnored(root) {
-            if (it.isDirectory) {
-                return@processFileRecursivelyWithoutIgnored true
-            }
-            val psi = it.toPsi(project) ?: return@processFileRecursivelyWithoutIgnored false
-            if (psi.language != python) return@processFileRecursivelyWithoutIgnored true
-
-            PsiTreeUtil.processElements(psi) { element ->
-                if (element is PsiComment) {
-                    val matches = pattern.findAll(element.text)
-                    for (ignore in matches) {
-                        val match = ignore.groups[1] ?: continue
-                        val range = match.range
-                        val start = element.startOffset + range.first
-                        val endInclusive = element.startOffset + range.last
-                        ignores.getOrPut(it) {
-                            mutableListOf()
-                        }.add(
-                            Ignore(
-                                it,
-                                TextRange(start, endInclusive + 1),
-                                match.value
-                            )
-                        )
-                    }
-                }
-                return@processElements true
+            val list = getIgnoresForFile(project, it, python)
+            if (list.isNotEmpty()) {
+                ignores[it] = list
             }
             return@processFileRecursivelyWithoutIgnored true
         }
     }
 
+    return ignores
+}
+
+fun getIgnoresForFile(
+    project: Project,
+    file: VirtualFile,
+    python: PythonLanguage?
+): List<Ignore> {
+    if (file.isDirectory) {
+        return emptyList()
+    }
+    val psi = file.toPsi(project) ?: return emptyList()
+    if (psi.language != python) return emptyList()
+
+    val ignores = mutableListOf<Ignore>()
+
+    PsiTreeUtil.processElements(psi) { element ->
+        if (element is PsiComment) {
+            val matches = pattern.findAll(element.text)
+            for (ignore in matches) {
+                val match = ignore.groups[1] ?: continue
+                val range = match.range
+                val start = element.startOffset + range.first
+                val endInclusive = element.startOffset + range.last
+                ignores.add(
+                    Ignore(
+                        file,
+                        TextRange(start, endInclusive + 1),
+                        match.value
+                    )
+                )
+            }
+        }
+        return@processElements true
+    }
     return ignores
 }
